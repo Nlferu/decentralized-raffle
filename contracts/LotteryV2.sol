@@ -40,7 +40,10 @@ contract LotteryV2 is Ownable {
     }
 
     function getRandomNumber() public onlyOwner {
-
+        // 1. Create subscription
+        // 2. Get subscription ID 
+        // 3. Fund subscription with LINK
+        // 4. Add contract created to subscription list
     }
 
     function pickWinner() public onlyOwner {
