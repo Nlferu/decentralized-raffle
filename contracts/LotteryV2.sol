@@ -15,11 +15,14 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
 
     // Below stores all addresses that bought lottery ticket, same addresses can appear more than once, which will increase chance to win for that address.
     // Address is payable, because we will want to pay winner whole gathered amount (corrected by commission for owners of lottery)
+    address private immutable i_owner;
     address payable[] private players;
+    address private winner;
 
-    // VRFConsumerBaseV2 storage variables -> we add "_i" to all immutable variables
+    /* VRFConsumerBaseV2 state variables */
+    // We add "_i" to all immutable variables
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
-    bytes32 private immutable i_gasLimit;
+    bytes32 private immutable i_gasLane; // keyHash
     uint64 private immutable i_subsId;
     uint32 private immutable i_callbackGasLimit;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -30,20 +33,30 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     // Price feed source.
     AggregatorV3Interface internal price_feed;
 
+    /* Errors */
+    error Lottery__SendMoreToEnterLottery();
+    error Lottery__LotteryNotOpen();
+    error Lottery__TransferFailed();
+
     /* Events */
     event LotteryEntrance(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
+    event WinnerPicked(address indexed last_winner);
 
-    constructor(address _vrfCoordinator, bytes32 _gasLimit, uint64 _subsId, uint32 _callbackGasLimit) VRFConsumerBaseV2(_vrfCoordinator) {
+    constructor(address _vrfCoordinator, bytes32 _gasLane, uint64 _subsId, uint32 _callbackGasLimit) VRFConsumerBaseV2(_vrfCoordinator) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
-        i_gasLimit = _gasLimit;
+        i_gasLane = _gasLane;
         i_subsId = _subsId;
         i_callbackGasLimit = _callbackGasLimit;
+        i_owner = msg.sender;
     }
 
     // Below function allows you to buy lottery participation ticket.
     function buyTicket() public payable {
-        require(msg.value >= getEntryFee(), "Not Enough ETH, you have to pay to participate in lottery!");
+        // require(msg.value >= getEntryFee(), "Not Enough ETH, you have to pay to participate in lottery!");
+        if (msg.value < getEntryFee()) {
+            revert Lottery__SendMoreToEnterLottery();
+        }
         players.push(payable(msg.sender));
         emit LotteryEntrance(msg.sender);
     }
@@ -68,7 +81,7 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         // 3. Fund subscription with LINK
         // 4. Add contract created to subscription list
 
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLimit, i_subsId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLane, i_subsId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
         emit RequestedLotteryWinner(requestId);
     }
 
@@ -81,12 +94,26 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     // }
 
     // We have to override fulfillRandomWords() as it is "virtual" -> which means it expecting to be overwritten, otherwise we cant compile code.
-     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+     function fulfillRandomWords(uint256 /* requestId */, uint256[] memory randomWords) internal override {
+        uint256 indexOfWinner = randomWords[0] % players.length;
+        address payable recentWinner = players[indexOfWinner];
+        winner = recentWinner;
 
+        // Transfering money to winner using call(bool sent, bytes memory data) function:
+        /* 95% of Lottery contract balance is prize for winner */
+        uint256 prize = address(this).balance * 19 / 20;
+        /* 5% of Lottery contract balance is payment for Lottery owner */
+        uint256 commission = address(this).balance * 1 / 20;
+        (bool success, ) = recentWinner.call{value: prize}("Prize For Winner Transferred!");
+        (bool sent, ) = i_owner.call{value: commission}("Commission For Lottery Owner Transferred!");
+        if (!success || !sent) {
+            revert Lottery__TransferFailed();
+        }
+        emit WinnerPicked(recentWinner);
      }
 
-    function pickWinner() public onlyOwner {
-
+    function getWinner() public view returns (address) {
+        return winner;
     }
 
     // Below function allows us as Owners of lottery to withdraw money gathered on this contract.
