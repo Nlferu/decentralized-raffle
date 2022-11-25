@@ -1,9 +1,10 @@
 
-Contract:
-1. Assign Lottery States.
+Vid:
+15:17:15
 
-For local:
-1. Add mocks to run lottery on local blockchain.
+Deploy Script:
+1. Local network lottery successful deploy
+2. Goerli testnet lottery successful deploy
 
 For test_net:
 1. Check balance of LINK on subscriptionId and create script, which will transfer some links to maintain Lottery going.

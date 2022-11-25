@@ -16,7 +16,8 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     /* Lottery States */
     enum LotteryState {
         OPEN,
-        CALCULATING
+        CALCULATING,
+        CLOSED
     }
 
     /* Lottery Variables */
@@ -41,6 +42,8 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     /* Errors */
     error Lottery__SendMoreToEnterLottery();
     error Lottery__LotteryNotOpen();
+    error Lottery__LotteryAlreadyWorking();
+    error Lottery__LotteryNotCalculatingWinnerYet();
     error Lottery__TransferFailed();
 
     /* Events */
@@ -53,7 +56,15 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         i_gasLane = _gasLane;
         i_subsId = _subsId;
         i_callbackGasLimit = _callbackGasLimit;
+        lotteryState = LotteryState.CLOSED;
         i_owner = msg.sender;
+    }
+
+    function startLottery() public onlyOwner {
+        if (lotteryState != LotteryState.CLOSED) {
+            revert Lottery__LotteryAlreadyWorking();
+        }
+        lotteryState = LotteryState.OPEN;
     }
 
     // Below function allows you to buy lottery participation ticket.
@@ -62,12 +73,18 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         if (msg.value < getEntryFee()) {
             revert Lottery__SendMoreToEnterLottery();
         }
+        if (lotteryState != LotteryState.OPEN) {
+            revert Lottery__LotteryNotOpen();
+        }
         players.push(payable(msg.sender));
         emit LotteryEntrance(msg.sender);
     }
 
     // Below function defines minimal fee to use buyTicket() function.
     function getEntryFee() public view returns (uint256) {
+        if (lotteryState != LotteryState.OPEN) {
+            revert Lottery__LotteryNotOpen();
+        }
         (, int256 price, , , ) = price_feed.latestRoundData();
         // Below has to be expressed with 18 decimals. From Chainlink pricefeed, we know ETH/USD has 8 decimals, so we need to multiply by 10^10.
         uint256 adjustedPrice = uint256(price) * 10**10;
@@ -82,28 +99,34 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         // 2. Get subscription ID
         // 3. Fund subscription with LINK
         // 4. Add contract created to subscription list
-
+        lotteryState = LotteryState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLane, i_subsId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
         emit RequestedLotteryWinner(requestId);
     }
 
     // We have to override fulfillRandomWords() as it is "virtual" -> which means it expecting to be overwritten, otherwise we cant compile code.
     function fulfillRandomWords(uint256 /* requestId */, uint256[] memory randomWords) internal override {
-    uint256 indexOfWinner = randomWords[0] % players.length;
-    address payable recentWinner = players[indexOfWinner];
-    winner = recentWinner;
+        if (lotteryState != LotteryState.CALCULATING) {
+            revert Lottery__LotteryNotCalculatingWinnerYet();
+        }
+        uint256 indexOfWinner = randomWords[0] % players.length;
+        address payable recentWinner = players[indexOfWinner];
+        winner = recentWinner;
+        // Resetting "players" array and closing lottery
+        players = new address payable[](0);
+        lotteryState = LotteryState.CLOSED;
 
-    // Transfering money to winner using call(bool sent, bytes memory data) function:
-    /* 95% of Lottery contract balance is prize for winner */
-    uint256 prize = address(this).balance * 19/20;
-    /* 5% of Lottery contract balance is payment for Lottery owner */
-    uint256 commission = address(this).balance * 1/20;
-    (bool success, ) = recentWinner.call{value: prize}("Prize For Winner Transferred!");
-    (bool sent, ) = i_owner.call{value: commission}("Commission For Lottery Owner Transferred!");
-    if (!success || !sent) {
-        revert Lottery__TransferFailed();
-    }
-    emit WinnerPicked(recentWinner);
+        // Transfering money to winner using call(bool sent, bytes memory data) function:
+        /* 95% of Lottery contract balance is prize for winner */
+        uint256 prize = address(this).balance * 19/20;
+        /* 5% of Lottery contract balance is payment for Lottery owner */
+        uint256 commission = address(this).balance * 1/20;
+        (bool success, ) = recentWinner.call{value: prize}("Prize For Winner Transferred!");
+        (bool sent, ) = i_owner.call{value: commission}("Commission For Lottery Owner Transferred!");
+        if (!success || !sent) {
+            revert Lottery__TransferFailed();
+        }
+        emit WinnerPicked(recentWinner);
     }
 
     function getPlayers() public view returns (address payable[] memory, uint256) {
