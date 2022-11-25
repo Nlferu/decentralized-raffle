@@ -11,18 +11,19 @@ INITIAL_PRICE = 200000000000 # 2,000 $
 # Constructor arguments for VRFCoordinatorV2Mock
 BASE_FEE = 250000000000000000 # 0.25 is this the premium in LINK?
 GAS_PRICE_LINK = 1e9 # link per gas, is this the gas lane? // 0.000000001 LINK per gas
+FUND_AMOUNT = 1e18 # 1 ETH
 
 # We have to map contract type
 contract_to_mock = {
     "eth_usd_price_feed": MockV3Aggregator,
-    "vrf_coordinator": VRFCoordinatorV2Mock
+    "vrf_coordinator_v2": VRFCoordinatorV2Mock
 }
 
 # Added for testing purposes
 def main():
     deploy_mocks()
     print(f'{get_contract("eth_usd_price_feed").address}')
-    print(f'{get_contract("vrf_coordinator").address}')
+    print(f'{get_contract("vrf_coordinator_v2").address}')
 
 
 def get_account(index = None, id = None):

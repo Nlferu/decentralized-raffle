@@ -51,7 +51,9 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     event RequestedLotteryWinner(uint256 indexed requestId);
     event WinnerPicked(address indexed last_winner);
 
-    constructor(address _vrfCoordinator, bytes32 _gasLane, uint64 _subsId, uint32 _callbackGasLimit) VRFConsumerBaseV2(_vrfCoordinator) {
+    constructor(address _priceFeedAddress, address _vrfCoordinator, bytes32 _gasLane, uint64 _subsId, uint32 _callbackGasLimit) VRFConsumerBaseV2(_vrfCoordinator) {
+        price_feed = AggregatorV3Interface(_priceFeedAddress);
+        entryFee = 50 * (10 ** 18);
         i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
         i_gasLane = _gasLane;
         i_subsId = _subsId;
@@ -93,7 +95,7 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         return costToEnter;
     }
 
-    function getRandomNumber() public onlyOwner {
+    function pickWinner() public onlyOwner {
         // ToDo: Below steps to be moved into deploy script.
         // 1. Create subscription
         // 2. Get subscription ID
@@ -106,9 +108,9 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
 
     // We have to override fulfillRandomWords() as it is "virtual" -> which means it expecting to be overwritten, otherwise we cant compile code.
     function fulfillRandomWords(uint256 /* requestId */, uint256[] memory randomWords) internal override {
-        if (lotteryState != LotteryState.CALCULATING) {
-            revert Lottery__LotteryNotCalculatingWinnerYet();
-        }
+        // if (lotteryState != LotteryState.CALCULATING) {
+        //     revert Lottery__LotteryNotCalculatingWinnerYet();
+        // }
         uint256 indexOfWinner = randomWords[0] % players.length;
         address payable recentWinner = players[indexOfWinner];
         winner = recentWinner;
