@@ -24,7 +24,8 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     LotteryState private lotteryState;
     address private immutable i_owner;
     address payable[] private players;
-    address private winner;
+    uint256[] public s_randomWords;
+    address public winner;
 
     /* VRFConsumerBaseV2 state variables */
     // We add "_i" to all immutable variables
@@ -49,7 +50,7 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     /* Events */
     event LotteryEntrance(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
-    event WinnerPicked(address indexed last_winner);
+    event WinnerPicked(address indexed recentWinner);
 
     constructor(address _priceFeedAddress, address _vrfCoordinator, bytes32 _gasLane, uint64 _subsId, uint32 _callbackGasLimit) VRFConsumerBaseV2(_vrfCoordinator) {
         price_feed = AggregatorV3Interface(_priceFeedAddress);
@@ -108,12 +109,13 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
 
     // We have to override fulfillRandomWords() as it is "virtual" -> which means it expecting to be overwritten, otherwise we cant compile code.
     function fulfillRandomWords(uint256 /* requestId */, uint256[] memory randomWords) internal override {
-        // if (lotteryState != LotteryState.CALCULATING) {
-        //     revert Lottery__LotteryNotCalculatingWinnerYet();
-        // }
+        if (lotteryState != LotteryState.CALCULATING) {
+            revert Lottery__LotteryNotCalculatingWinnerYet();
+        }
         uint256 indexOfWinner = randomWords[0] % players.length;
         address payable recentWinner = players[indexOfWinner];
         winner = recentWinner;
+        s_randomWords = randomWords;
         // Resetting "players" array and closing lottery
         players = new address payable[](0);
         lotteryState = LotteryState.CLOSED;

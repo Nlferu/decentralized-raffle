@@ -11,7 +11,7 @@ INITIAL_PRICE = 200000000000 # 2,000 $
 # Constructor arguments for VRFCoordinatorV2Mock
 BASE_FEE = 250000000000000000 # 0.25 is this the premium in LINK?
 GAS_PRICE_LINK = 1e9 # link per gas, is this the gas lane? // 0.000000001 LINK per gas
-FUND_AMOUNT = 1e18 # 1 ETH
+FUND_AMOUNT = 1e18 #1e18 # 1 ETH
 
 # We have to map contract type
 contract_to_mock = {

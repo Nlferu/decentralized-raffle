@@ -25,7 +25,6 @@ networks:
     verify: False
   development:
     eth_usd_price_feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
-    subscriptionId: "6666"
     callbackGasLimit: 500000 # <- showed in Gwei -> 0,0005 ETH
     gasLane: "0x8af398995b04c28e9951adb9721ef74c74f93e6a478f39e7e0777be13527e7ef"
     verify: False
