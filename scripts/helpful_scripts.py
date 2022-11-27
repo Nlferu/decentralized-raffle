@@ -1,5 +1,5 @@
 
-from brownie import Contract, network, config, accounts, MockV3Aggregator, VRFCoordinatorV2Mock
+from brownie import Contract, network, config, accounts, MockV3Aggregator, VRFCoordinatorV2Mock, LinkToken
 
 LOCAL_BLOCKCHAIN_ENVIRONMENTS = ["development", "ganache-local"]
 FORKED_LOCAL_ENVIRONMENTS = ["mainnet-fork-dev"]
@@ -11,12 +11,13 @@ INITIAL_PRICE = 200000000000 # 2,000 $
 # Constructor arguments for VRFCoordinatorV2Mock
 BASE_FEE = 250000000000000000 # 0.25 is this the premium in LINK?
 GAS_PRICE_LINK = 1e9 # link per gas, is this the gas lane? // 0.000000001 LINK per gas
-FUND_AMOUNT = 1e18 #1e18 # 1 ETH
+FUND_AMOUNT = 1e18 # 1 ETH / 1 LINK
 
 # We have to map contract type
 contract_to_mock = {
     "eth_usd_price_feed": MockV3Aggregator,
-    "vrf_coordinator_v2": VRFCoordinatorV2Mock
+    "vrf_coordinator_v2": VRFCoordinatorV2Mock,
+    "link_token": LinkToken
 }
 
 # Added for testing purposes
@@ -24,6 +25,7 @@ def main():
     deploy_mocks()
     print(f'{get_contract("eth_usd_price_feed").address}')
     print(f'{get_contract("vrf_coordinator_v2").address}')
+    print(f'{get_contract("link_token").address}')
 
 
 def get_account(index = None, id = None):
@@ -66,7 +68,8 @@ def deploy_mocks():
     # This have "decimals" and "initial value" in constructor:
     if len(MockV3Aggregator) <= 0:
         MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE, {"from": get_account()})
-    
+    if len(LinkToken) <= 0:
+        LinkToken.deploy({"from": get_account()})
     if len(VRFCoordinatorV2Mock) <= 0:
         VRFCoordinatorV2Mock.deploy(BASE_FEE, GAS_PRICE_LINK, {"from": get_account()})
     print("Mocks Deployed!")
