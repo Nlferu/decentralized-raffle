@@ -101,11 +101,6 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     }
 
     function pickWinner() public onlyOwner {
-        // ToDo: Below steps to be moved into deploy script.
-        // 1. Create subscription
-        // 2. Get subscription ID
-        // 3. Fund subscription with LINK
-        // 4. Add contract created to subscription list
         lotteryState = LotteryState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(i_gasLane, i_subsId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS);
         emit RequestedLotteryWinner(requestId);
