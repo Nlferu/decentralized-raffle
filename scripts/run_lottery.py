@@ -120,7 +120,7 @@ def run_lottery():
         balance, reqCount, owner, consumers = vrfCoordinatorV2Mock.getSubscription(subId)
         print(f'Your Subscription Current Balance Is: {balance}')
         
-        # If balance is less than 10 LINK's, fund subscription
+        # If balance is less than 1 LINK, fund subscription
         if balance < 1000000000000000000:
             link_token = get_contract("link_token")
             fund_sub_tx = link_token.transferAndCall(vrfCoordinatorV2Mock.address, FUND_AMOUNT, convert.to_bytes(subId), {"from": account})
