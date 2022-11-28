@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// Entry Fee
+// Entry Fee with commission for Lottery organizer
 // If you have ticket, you can take part in lottery
-// Picking random winner based on random number
+// Picking random winner based on random number provided by chainlink
 // Same address can buy ticket multiple times, which will increase its winning chance
 
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
@@ -26,6 +26,10 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     address payable[] private players;
     uint256[] public s_randomWords;
     address public winner;
+    uint256 public prize;
+    uint256 private commission;
+    bool private success;
+    bool private sent;
 
     /* VRFConsumerBaseV2 state variables */
     // We add "_i" to all immutable variables
@@ -122,15 +126,19 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
 
         // Transfering money to winner using call(bool sent, bytes memory data) function:
         /* 95% of Lottery contract balance is prize for winner */
-        uint256 prize = address(this).balance * 19/20;
+        prize = address(this).balance * 19/20;
         /* 5% of Lottery contract balance is payment for Lottery owner */
-        uint256 commission = address(this).balance * 1/20;
-        (bool success, ) = recentWinner.call{value: prize}("Prize For Winner Transferred!");
-        (bool sent, ) = i_owner.call{value: commission}("Commission For Lottery Owner Transferred!");
+        commission = address(this).balance * 1/20;
+        (success, ) = recentWinner.call{value: prize}("Prize For Winner Transferred!");
+        (sent, ) = i_owner.call{value: commission}("Commission For Lottery Owner Transferred!");
         if (!success || !sent) {
             revert Lottery__TransferFailed();
         }
         emit WinnerPicked(recentWinner);
+    }
+
+    function getLotteryTransactions() public view returns (uint256, uint256, bool, bool) {
+        return (prize, commission, success, sent);
     }
 
     function getPlayers() public view returns (address payable[] memory, uint256) {
@@ -138,12 +146,16 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         return (players, players_amount);
     }
 
-    function getPoolPrize() public view returns (uint256) {
-        uint256 prize_amount = address(this).balance * 19/20;
-        return prize_amount;
+    function getLotteryState() public view returns (LotteryState) {
+        return lotteryState;
     }
 
     function getWinner() public view returns (address) {
         return winner;
+    }
+
+    function getLotteryBalance() public view onlyOwner returns (uint256) {
+        uint256 lottery_balance = address(this).balance;
+        return lottery_balance;
     }
 }

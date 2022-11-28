@@ -1,7 +1,4 @@
 
 Deploy Script:
-1. Local network lottery -> clear code
-2. Goerli testnet lottery -> code it
-
-For goerli test_net:
-1. Check balance of LINK on subscriptionId and if it is < 10 create script, which will transfer some links to maintain Lottery going.
+* Clear Code
+* Add Tests
