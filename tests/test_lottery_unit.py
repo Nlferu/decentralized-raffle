@@ -11,6 +11,7 @@ def test_get_entrance_fee_and_states():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only For Local Testing")
     account = get_account()
+    # We can use 0 for now as we are not funding subscription or adding consumer yet
     subId = "0"
     lottery = deploy_lottery_local(subId)
     # Act
