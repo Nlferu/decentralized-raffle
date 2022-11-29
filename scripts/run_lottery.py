@@ -212,6 +212,24 @@ def deploy_lottery():
     return lottery
 
 
+def deploy_lottery_local(subId):
+    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        account = get_account()
+        lottery = LotteryV2.deploy(
+            get_contract("eth_usd_price_feed").address,
+            get_contract("vrf_coordinator_v2").address,
+            config["networks"][network.show_active()]["gasLane"],
+            subId,
+            config["networks"][network.show_active()]["callbackGasLimit"],
+            {"from": account},
+            publish_source = config["networks"][network.show_active()].get("verify", False),
+        )
+        print("Lottery Has Been Successfully Deployed!")
+    else:
+        print("This Function Doesn't Work On Local Testnet")
+    return lottery
+
+
 def start_lottery():
     account = get_account()
     lottery = LotteryV2[-1]
