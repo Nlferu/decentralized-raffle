@@ -12,7 +12,6 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract LotteryV2 is VRFConsumerBaseV2, Ownable {
-
     /* Lottery States */
     enum LotteryState {
         OPEN,
@@ -43,7 +42,7 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     /* Calculating entryFee */
     AggregatorV3Interface internal price_feed;
     uint256 private entryFee;
-    
+
     /* Errors */
     error Lottery__SendMoreToEnterLottery();
     error Lottery__LotteryNotOpen();
@@ -56,7 +55,13 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
     event RequestedLotteryWinner(uint256 indexed requestId);
     event WinnerPicked(address indexed recentWinner);
 
-    constructor(address _priceFeedAddress, address _vrfCoordinator, bytes32 _gasLane, uint64 _subsId, uint32 _callbackGasLimit) VRFConsumerBaseV2(_vrfCoordinator) {
+    constructor(
+        address _priceFeedAddress,
+        address _vrfCoordinator,
+        bytes32 _gasLane,
+        uint64 _subsId,
+        uint32 _callbackGasLimit
+    ) VRFConsumerBaseV2(_vrfCoordinator) {
         price_feed = AggregatorV3Interface(_priceFeedAddress);
         entryFee = 50 * (10 ** 18);
         i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
@@ -94,9 +99,9 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
         }
         (, int256 price, , , ) = price_feed.latestRoundData();
         // Below has to be expressed with 18 decimals. From Chainlink pricefeed, we know ETH/USD has 8 decimals, so we need to multiply by 10^10.
-        uint256 adjustedPrice = uint256(price) * 10**10;
+        uint256 adjustedPrice = uint256(price) * 10 ** 10;
         // We cannot return decimals, hence we need to express 50$ with 50 * 10*18 / 2000 (adjusted price of ETH).
-        uint256 costToEnter = (entryFee * 10**18) / adjustedPrice;
+        uint256 costToEnter = (entryFee * 10 ** 18) / adjustedPrice;
         return costToEnter;
     }
 
@@ -121,9 +126,9 @@ contract LotteryV2 is VRFConsumerBaseV2, Ownable {
 
         // Transfering money to winner using call(bool sent, bytes memory data) function:
         /* 95% of Lottery contract balance is prize for winner */
-        prize = address(this).balance * 19/20;
+        prize = (address(this).balance * 19) / 20;
         /* 5% of Lottery contract balance is payment for Lottery owner */
-        commission = address(this).balance * 1/20;
+        commission = (address(this).balance * 1) / 20;
         (success, ) = recentWinner.call{value: prize}("Prize For Winner Transferred!");
         (sent, ) = i_owner.call{value: commission}("Commission For Lottery Owner Transferred!");
         if (!success || !sent) {
