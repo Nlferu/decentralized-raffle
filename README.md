@@ -1,9 +1,3 @@
-# Lottery On VRFConsumerBaseV2
+# Decentralized Lottery
 
-Similar project as: https://github.com/PatrickAlphaC/smartcontract-lottery (It's using VRFConsumerBaseV1)
-
-* Recreated from scratch on VRFConsumerV2!
-
-* You can run it both Locally or on TestNet
-
-* You will still receive random number on both!
+Decentralized lottery smart contract using Chainlink VRFConsumerBaseV2 for real randmoness built in python environment with Brownie framework.
